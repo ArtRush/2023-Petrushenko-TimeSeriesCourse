@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+from sktime.distances import dtw_distance
 
 from modules.utils import *
 from modules.metrics import *
@@ -30,18 +31,27 @@ class BestMatchFinder:
         Warping window size.
     """
 
-    def __init__(self, ts_data, query, exclusion_zone=1, top_k=3, normalize=True, r=0.05):
+    def __init__(
+            self,
+            ts_data,
+            query,
+            step=1,
+            exclusion_zone=1,
+            top_k=3,
+            normalize=True,
+            r=0.05
+        ):
 
         self.query = copy.deepcopy(np.array(query))
         if (len(ts_data.shape) == 2): # time series set
             self.ts_data = ts_data
         else:
-            self.ts_data = sliding_window(ts_data, len(query))
-
+            self.ts_data = sliding_window(ts_data, len(query), step)
         self.excl_zone_denom = exclusion_zone
         self.top_k = top_k
         self.normalize = normalize
         self.r = r
+        self.best_match = {'index': list, 'distance': list}
 
 
     def _apply_exclusion_zone(self, a, idx, excl_zone):
@@ -128,8 +138,17 @@ class NaiveBestMatchFinder(BestMatchFinder):
     Naive Best Match Finder.
     """
     
-    def __init__(self, ts=None, query=None, exclusion_zone=1, top_k=3, normalize=True, r=0.05):
-        super().__init__(ts, query, exclusion_zone, top_k, normalize, r)
+    def __init__(
+            self,
+            ts=None,
+            query=None,
+            step=1,
+            exclusion_zone=1,
+            top_k=3,
+            normalize=True,
+            r=0.05
+        ):
+        super().__init__(ts, query, step, exclusion_zone, top_k, normalize, r)
 
 
     def perform(self):
@@ -142,6 +161,7 @@ class NaiveBestMatchFinder(BestMatchFinder):
             Dictionary containing results of the naive algorithm.
         """
         N, m = self.ts_data.shape
+        print(N, m)
         
         bsf = float("inf")
         
@@ -150,9 +170,17 @@ class NaiveBestMatchFinder(BestMatchFinder):
         else:
             excl_zone = int(np.ceil(m / self.excl_zone_denom))
         
-        # INSERT YOUR CODE
+        best_match_indices = []
+        best_matches = []
+        
+        distances = []
+        for index, ts in enumerate(self.ts_data):
+            distance = dtw_distance(ts, self.query, self.r)
+            distances.append(distance)
+        
+        self.best_match = self._top_k_match(distances, m, bsf, excl_zone)
 
-        return self.bestmatch
+        return self.best_match
 
 
 class UCR_DTW(BestMatchFinder):
@@ -241,8 +269,8 @@ class UCR_DTW(BestMatchFinder):
         
         # INSERT YOUR CODE
 
-        return {'index' : self.bestmatch['index'],
-                'distance' : self.bestmatch['distance'],
+        return {'index' : self.best_match['index'],
+                'distance' : self.best_match['distance'],
                 'lb_Kim_num': self.lb_Kim_num,
                 'lb_KeoghCQ_num': self.lb_KeoghCQ_num,
                 'lb_KeoghQC_num': self.lb_KeoghQC_num
