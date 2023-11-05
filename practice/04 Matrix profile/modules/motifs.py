@@ -1,5 +1,7 @@
 import numpy as np
 
+import stumpy
+
 from modules.utils import *
 
 
@@ -21,10 +23,7 @@ def top_k_motifs(matrix_profile, top_k=3):
         Top-k motifs (left and right indices and distances).
     """
 
-    motifs_idx = []
-    motifs_dist = []
-
-    # INSERT YOUR CODE
+    motifs_dist, motifs_idx = stumpy.motifs(T=matrix_profile['data']['ts1'], P=matrix_profile['mp'], max_motifs=top_k)
 
     return {
         "indices" : motifs_idx,
